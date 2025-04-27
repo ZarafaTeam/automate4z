@@ -1,0 +1,27 @@
+steps:
+  - name: loop-users
+    action: control.for-each
+    with:
+      items:
+        - { name: "Alice", role: "admin" }
+        - { name: "Bob", role: "user" }
+    steps:
+      - name: greet
+        action: local.eval
+        with:
+          expression: "'Hello ' + item.name"
+        output:
+          greeting: result
+
+  - name: collect-greetings
+    action: local.collect
+    with:
+      prefix: "greet"
+      key: "greeting"
+    output:
+      allGreetings: result
+
+  - name: print-all
+    action: local.eval
+    with:
+      expression: "console.log('All greetings:', env.allGreetings)"
