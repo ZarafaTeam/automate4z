@@ -1,0 +1,29 @@
+{
+  "name": "a4z",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/a4z.js",
+  "bin": {
+    "automate4z": "dist/a4z.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/a4z.js"
+  },
+  "dependencies": {
+    "@types/node": "^22.15.2",
+    "commander": "^11.0.0",
+    "unzipper": "^0.10.11",
+    "yaml": "^2.3.5",
+    "zod": "^3.22.2"
+  },
+  "devDependencies": {
+    "@types/unzipper": "^0.10.11",
+    "typescript": "^5.3.3"
+  },
+  "a4z": {
+    "plugins": [
+      "./a4z_plugins/a4z-plugin-hello"
+    ]
+  }
+}
