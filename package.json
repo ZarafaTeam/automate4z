@@ -1,29 +1,14 @@
 {
-  "name": "a4z",
-  "version": "0.1.0",
-  "type": "module",
-  "main": "dist/a4z.js",
-  "bin": {
-    "automate4z": "dist/a4z.js"
-  },
+  "name": "a4z-monorepo",
+  "private": true,
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/a4z.js"
-  },
-  "dependencies": {
-    "@types/node": "^22.15.2",
-    "commander": "^11.0.0",
-    "unzipper": "^0.10.11",
-    "yaml": "^2.3.5",
-    "zod": "^3.22.2"
+    "bootstrap": "pnpm install",
+    "build": "pnpm -r run build",
+    "dev": "pnpm -r run dev",
+    "lint": "pnpm -r run lint"
   },
   "devDependencies": {
-    "@types/unzipper": "^0.10.11",
-    "typescript": "^5.3.3"
-  },
-  "a4z": {
-    "plugins": [
-      "./a4z_plugins/a4z-plugin-hello"
-    ]
+    "depcheck": "^1.4.7",
+    "typescript": "^5.1.0"
   }
 }

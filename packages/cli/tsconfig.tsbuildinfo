@@ -1,0 +1,1 @@
+{"root":["./src/a4z.ts","./src/a4z-plugin-hello/src/index.ts","./src/core/context.ts","./src/core/loader.ts","./src/core/runner.ts","./src/steps/index.ts","./src/steps/control/for-each.ts","./src/steps/local/collect.ts","./src/steps/local/eval.ts","./src/steps/local/say.ts","./src/steps/local/shout.ts","./src/types/step.ts"],"version":"5.8.3"}

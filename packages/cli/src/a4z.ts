@@ -5,6 +5,8 @@ import * as path from "path";
 import * as fs from "fs";
 import * as unzipper from "unzipper";
 import * as https from "https";
+import { startServer } from "@a4z/web-server";
+import open from "open";
 
 const program = new Command();
 
@@ -165,6 +167,15 @@ program
     } else {
       console.warn(`⚠️  Plugin non trouvé sur disque : ${pluginPath}`);
     }
+  });
+
+program
+  .command("ui")
+  .description("Lancer l’UI Web pour construire et exécuter des workflows")
+  .option("--dir <path>", "Répertoire des workflows", process.cwd())
+  .action(async (opts) => {
+    await startServer(opts.dir);
+    open("http://localhost:3000");
   });
 
 program.parse();
