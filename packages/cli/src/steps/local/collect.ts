@@ -28,5 +28,5 @@ export async function run(
     collected.push(env[fullKey]);
   }
 
-  return { result: collected };
+  return { success: true, result: collected };
 }

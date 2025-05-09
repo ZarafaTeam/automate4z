@@ -20,7 +20,8 @@
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
-    "@types/unzipper": "^0.10.11"
+    "@types/unzipper": "^0.10.11",
+    "duplexer2": "^0.1.4"
   },
   "a4z": {
     "plugins": []

@@ -5,7 +5,8 @@ import type { Step } from "../types/step.js";
 
 export async function runWorkflow(
   filePath: string,
-  cliEnv: Record<string, string> = {}
+  cliEnv: Record<string, string> = {},
+  debugMode: boolean = false
 ) {
   const workflow = loadWorkflowFile(filePath);
   const fileEnv = workflow.env ?? {};
@@ -13,7 +14,7 @@ export async function runWorkflow(
 
   const env = { ...fileEnv, ...cliEnv };
   const context = new Context(env);
-
+  console.log(`🔄 automate4z is running workflow file "${filePath}"`);
   for (const step of steps) {
     const loopItems = context.resolve(step.forEach);
 
@@ -22,12 +23,12 @@ export async function runWorkflow(
         const item = loopItems[i];
         const loopStep = { ...step, name: `${step.name}#${i + 1}` };
         const scopedContext = new Context({ ...context.getEnvObject(), item });
-        await executeStep(loopStep, scopedContext, context, item);
+        await executeStep(loopStep, scopedContext, context, debugMode, item);
       }
       continue;
     }
 
-    await executeStep(step, context, context);
+    await executeStep(step, context, context, debugMode);
   }
 }
 
@@ -35,6 +36,7 @@ export async function executeStep(
   step: Step,
   context: Context,
   parentContext: Context,
+  debugMode: boolean = false,
   item?: any
 ) {
   const condition = context.resolve(step.if);
@@ -45,7 +47,7 @@ export async function executeStep(
     condition === "1";
 
   if (!ifPassed) {
-    console.log(`⏭️  Step "${step.name}" skipped (condition "if" not met).`);
+    console.log(`\n⏭️  Step "${step.name}" skipped (condition "if" not met).`);
     return;
   }
 
@@ -56,44 +58,64 @@ export async function executeStep(
     resolvedActive === true ||
     resolvedActive === "true";
 
-  console.log(`🔄 Running step "${step.name}"...`);
+  console.log(`\n🔄 Running step "${step.name}"...`);
   if (!isActive) {
     console.log(`⏭️  Step "${step.name}" is inactive. Skipping.`);
     return;
   }
 
-  const handler = getStepHandler(step.action);
-
-  let resolvedInputs = Object.fromEntries(
-    Object.entries(step.with ?? {}).map(([k, v]) => [k, context.resolve(v)])
-  );
-
-  if (handler.schema) {
-    const validation = handler.schema.safeParse(resolvedInputs);
-    if (!validation.success) {
-      console.error(`❌ Invalid input for step "${step.name}":`);
-      console.error(validation.error.format());
-      process.exit(1);
+  let handler;
+  try {
+    handler = getStepHandler(step.action);
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error(`❌`, error.message);
+    } else {
+      console.error(`❌ Failed to get handler for step "${step.name}":`, error);
     }
-    resolvedInputs = validation.data;
+    //process.exit(1);
   }
 
-  const result = await handler.run({ ...step, with: resolvedInputs }, context);
-  //console.log(`✅ Step "${step.name}" completed.`);
-  //console.log(`🧪 Step "${step.name}" result:`, result);
-  //console.log(`🧪 Step "${step.name}" context:`, context);
+  if (handler) {
+    let resolvedInputs = Object.fromEntries(
+      Object.entries(step.with ?? {}).map(([k, v]) => [k, context.resolve(v)])
+    );
 
-  parentContext.setOutput(step.name, result);
+    if (handler.schema) {
+      const validation = handler.schema.safeParse(resolvedInputs);
+      if (!validation.success) {
+        console.error(`❌ Invalid input for step "${step.name}":`);
+        console.error(validation.error.format());
+        process.exit(1);
+      }
+      resolvedInputs = validation.data;
+    }
 
-  if (step.output) {
-    for (const [envKey, resultKey] of Object.entries(step.output)) {
-      const value = result?.[resultKey];
-      console.log(`📦 Exporting "${resultKey}" as env["${envKey}"] = ${value}`);
-      if (value !== undefined) {
-        parentContext.setEnv(envKey, value);
+    const result = await handler.run(
+      { ...step, with: resolvedInputs },
+      context
+    );
+    //console.log(`✅ Step "${step.name}" completed.`);
+    //console.log(`🧪 Step "${step.name}" result:`, result);
+    //console.log(`🧪 Step "${step.name}" context:`, context);
+
+    parentContext.setOutput(step.name, result);
+
+    if (step.output) {
+      for (const [envKey, resultKey] of Object.entries(step.output)) {
+        const value = result?.[resultKey];
+        console.log(
+          `📦 Exporting "${resultKey}" as env["${envKey}"] = ${value}`
+        );
+        if (value !== undefined) {
+          parentContext.setEnv(envKey, value);
+        }
       }
     }
+    if (debugMode) console.log(`🧪 Step "${step.name}" returned:`, result);
+  } else {
+    const result = { success: false };
+    parentContext.setOutput(step.name, result);
+    if (debugMode) console.log(`🧪 Step "${step.name}" returned:`, result);
   }
-
-  console.log(`🧪 Step "${step.name}" returned:`, result);
 }

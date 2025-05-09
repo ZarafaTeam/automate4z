@@ -19,6 +19,9 @@ const WorkflowSchema = z.object({
 });
 
 export function loadWorkflowFile(filePath: string) {
+  if (!filePath.endsWith(".yaml") && !filePath.endsWith(".yml")) {
+    filePath += ".yaml";
+  }
   const content = fs.readFileSync(filePath, "utf-8");
   const parsed = yaml.parse(content);
 

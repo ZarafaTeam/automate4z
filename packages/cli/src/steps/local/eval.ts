@@ -12,7 +12,7 @@ export async function run(
   try {
     const fn = new Function("env", "item", `return ${expr}`);
     const result = fn(context.getEnvObject(), context.getEnvObject().item);
-    return { result };
+    return { success: true, result };
   } catch (err) {
     console.error(`❌ Failed to evaluate expression: ${expr}`);
     console.error(err);

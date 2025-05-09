@@ -1,15 +1,22 @@
+import * as localLog from "./local/log.js";
 import * as localEval from "./local/eval.js";
 import * as localCollect from "./local/collect.js";
 import * as localSay from "./local/say.js";
 import * as localShout from "./local/shout.js";
 import * as controlForEach from "./control/for-each.js";
+import * as localFileCopy from "./local.file/copy.js";
+import * as zosFileCopyPS from "./zos.file/copyps.js";
 
 const registry: Record<string, any> = {
+  "local.log": localLog,
   "local.eval": localEval,
   "local.collect": localCollect,
   "local.say": localSay,
   "local.shout": localShout,
   "control.for-each": controlForEach,
+  "local.file.copy": localFileCopy,
+  "zos.file.copyps": zosFileCopyPS,
+  // Add more steps here as needed
 };
 
 export function getStepHandler(action: string) {

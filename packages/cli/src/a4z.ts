@@ -22,6 +22,7 @@ program
   .command("run")
   .description("Exécute un workflow YAML")
   .argument("<workflow>", "Chemin vers le fichier YAML")
+  .option("--debugMode", "Mode débogage")
   .option(
     "--env <keyValue...>",
     "Variables d’environnement à injecter",
@@ -33,7 +34,7 @@ program
     {}
   )
   .action(async (workflow, options) => {
-    await runWorkflow(workflow, options.env);
+    await runWorkflow(workflow, options.env, options.debugMode);
   });
 
 // add-plugin

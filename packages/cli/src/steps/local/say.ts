@@ -7,5 +7,5 @@ export const schema = z.object({
 export async function run(step: { with: { name: string } }, context: any) {
   const name = step.with.name;
   console.log(`👋 Hello ${name} from plugin!`);
-  return { message: `Hello ${name}!` };
+  return { success: true, message: `Hello ${name}!` };
 }
