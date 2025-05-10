@@ -12,6 +12,9 @@
   },
   "dependencies": {
     "@a4z/web-server": "workspace:^",
+    "@zowe/imperative": "^8.20.0",
+    "@zowe/secrets-for-zowe-sdk": "^8.18.3",
+    "@zowe/zos-files-for-zowe-sdk": "^8.20.0",
     "commander": "^9.0.0",
     "open": "^8.4.0",
     "unzipper": "^0.12.3",
