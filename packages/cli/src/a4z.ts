@@ -7,6 +7,11 @@ import * as unzipper from "unzipper";
 import * as https from "https";
 import { startServer } from "@a4z/web-server";
 import open from "open";
+import { ConfigManager } from "./core/configManager.js";
+
+// Load the configuration file
+const config = ConfigManager.getInstance().getConfig();
+console.log(`✨ Welcome to ${config?.appName} v${config?.version}`);
 
 const program = new Command();
 

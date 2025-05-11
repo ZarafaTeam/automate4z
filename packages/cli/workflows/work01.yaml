@@ -1,0 +1,21 @@
+env:
+  name: "Jim" # this is a string
+
+steps:
+  - name: greet-me
+    action: local.say
+    with:
+      name: "{{ env['name'] }}" # this is a string
+    output:
+      welcomeMessage: message
+
+  - name: shout-word
+    action: local.shout
+    active: true
+    with:
+      word: "{{ env['welcomeMessage'] }}"
+
+  - name: greet-me2
+    action: local.say
+    with:
+      name: "{{ env['shout-word.shouted'] }}"

@@ -1,0 +1,36 @@
+env:
+  name: "Jim" # this is a string
+
+steps:
+  - name: log01
+    action: local.log
+    with:
+      message: "Welcome {{ env['name'] }}" # this is a string
+    output:
+      welcomeMessage: message
+
+  - name: CopyPS
+    if: failure()
+    action: zos.file.copyps
+    with:
+      source: DT00PT.TOP0001.ENTREE
+      destination: AA86042.TOP0001.ENTREE
+
+  - name: CopyPS
+    if: success()
+    action: zos.file.copyps
+    with:
+      source: DT00PT.TOP.SOURCE
+      destination: AA86042.TOP.SRC99
+
+  # - name: CopyPDS
+  #   action: zos.file.copypds
+  #   with:
+  #     source: DT00PT.TOP.SOURCE
+  #     destination: AA86042.TOP.SRC01
+
+  - name: log02
+    if: failure()
+    action: local.log
+    with:
+      message: "C'est fini!"

@@ -6,6 +6,7 @@ import * as localShout from "./local/shout.js";
 import * as controlForEach from "./control/for-each.js";
 import * as localFileCopy from "./local.file/copy.js";
 import * as zosFileCopyPS from "./zos.file/copyps.js";
+import * as zosFileCopyPDS from "./zos.file/copyps.js";
 
 const registry: Record<string, any> = {
   "local.log": localLog,
@@ -16,6 +17,7 @@ const registry: Record<string, any> = {
   "control.for-each": controlForEach,
   "local.file.copy": localFileCopy,
   "zos.file.copyps": zosFileCopyPS,
+  "zos.file.copypds": zosFileCopyPS,
   // Add more steps here as needed
 };
 

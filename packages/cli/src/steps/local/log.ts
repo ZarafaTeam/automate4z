@@ -6,6 +6,6 @@ export const schema = z.object({
 
 export async function run(step: { with: { message: string } }, context: any) {
   const message = step.with.message;
-  console.log(message);
+  console.log(`📝 ${message}`);
   return { success: true, message };
 }

@@ -30,6 +30,5 @@ export function loadWorkflowFile(filePath: string) {
     console.error("❌ Invalid workflow YAML:", validation.error.format());
     process.exit(1);
   }
-
   return validation.data;
 }
