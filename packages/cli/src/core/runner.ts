@@ -7,11 +7,13 @@ function shouldRunStep(
   step: Step,
   workflowStatus: "success" | "failure"
 ): boolean {
-  if (!step.if) return true; // No condition, run the step
   if (step.if === "always()") return true; // Always run this step
   if (step.if === "success()" && workflowStatus === "success") return true; // Run if workflow was successful
   if (step.if === "failure()" && workflowStatus === "failure") return true; // Run if workflow failed
-  return false; // Default case, do not run the step
+  if (!step.if && workflowStatus === "failure") return false;
+  else return true; // Run if no condition is set and workflow was successful
+
+  return true; // Default case, do not run the step
 }
 
 export async function runWorkflow(

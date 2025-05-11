@@ -17,7 +17,8 @@ steps:
       destination: AA86042.TOP0001.ENTREE
 
   - name: CopyPS2
-    active: false
+    active: true
+    if: failure()
     action: zos.file.copyps
     with:
       source: DT00PT.TOP.SOURCE
