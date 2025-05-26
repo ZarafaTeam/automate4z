@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "baseUrl": ".",
+    "paths": {
+      "@a4z/cli/*": ["packages/cli/src/*"],
+      "@a4z/web-server/*": ["packages/web-server/src/*"],
+      "@a4z/web-ui/*": ["packages/web-ui/src/*"]
+    }
+  },
+  "include": ["packages/*/src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

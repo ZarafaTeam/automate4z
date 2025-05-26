@@ -1,36 +1,44 @@
 import { z } from "zod";
-import { executeStep } from "../../core/runner.js";
 import { Context } from "../../core/context.js";
+import { getStepHandler, type HandlerMap } from "../index.js";
+import type { Step, StepHandler } from "../../types/step.js";
 
-export const schema = z.object({
-  items: z.array(z.any()),
+const schema = z.object({
+  items: z.array(z.unknown()),
+  steps: z.array(
+    z.object({
+      name: z.string(),
+      action: z.string(),
+      with: z.record(z.unknown()).optional(),
+    })
+  ),
 });
 
 export async function run(
-  step: { with: { items: any[] }; steps: any[]; name: string },
+  data: z.infer<typeof schema>,
   context: Context
-) {
-  const items = step.with.items;
-  const innerSteps = step.steps;
+): Promise<{ loopCount: number }> {
+  const { items, steps } = data;
+  let loopCount = 0;
 
-  if (!Array.isArray(innerSteps)) {
-    throw new Error(
-      `❌ "steps" must be an array inside control.for-each step "${step.name}"`
-    );
-  }
-
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    const scopedContext = new Context({ ...context.getEnvObject(), item });
-
-    for (const subStep of innerSteps) {
-      const loopedStep = {
-        ...subStep,
-        name: `${subStep.name}#${i + 1}`,
-      };
-      await executeStep(loopedStep, scopedContext, context, item);
+  for (const item of items) {
+    context.setVariable("item", item);
+    for (const step of steps) {
+      const handler = getStepHandler(step.action as keyof HandlerMap);
+      if (!handler) {
+        throw new Error(`Handler not found for action: ${step.action}`);
+      }
+      await (handler as StepHandler<Record<string, unknown>, unknown>).run(
+        { name: step.name, action: step.action, with: step.with || {} } as Step<
+          Record<string, unknown>
+        >,
+        context
+      );
     }
+    loopCount++;
   }
 
-  return { loopCount: items.length };
+  return { loopCount };
 }
+
+export { schema };

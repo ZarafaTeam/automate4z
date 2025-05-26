@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["vitest/globals"],
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "module": "ESNext",
+    "target": "ES2020",
+    "skipLibCheck": true,
+    "esModuleInterop": true
+  },
+  "include": [
+    "packages/*/src/**/*.ts",
+    "packages/*/src/**/*.test.ts",
+    "packages/*/src/**/*.spec.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

@@ -1,11 +1,16 @@
 import { z } from "zod";
 
-export const schema = z.object({
+const schema = z.object({
   name: z.string(),
 });
 
-export async function run(step: { with: { name: string } }, context: any) {
-  const name = step.with.name;
-  console.log(`👋 Hello ${name} from plugin!`);
-  return { success: true, message: `Hello ${name}!` };
+export async function run(
+  step: { with: { name: string } },
+  _context: unknown
+): Promise<{ success: boolean; message: string }> {
+  const message = `Hello, ${step.with.name}!`;
+  console.log(message);
+  return { success: true, message };
 }
+
+export { schema };

@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import fs from "fs-extra";
 
-export async function startServer(workflowsDir: string) {
+export async function startServer(workflowsDir: string): Promise<void> {
   const app = express();
   const PORT = 3000;
 

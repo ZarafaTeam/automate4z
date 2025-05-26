@@ -1,187 +1,137 @@
 #!/usr/bin/env node
+
 import { Command } from "commander";
 import { runWorkflow } from "./core/runner.js";
 import * as path from "path";
 import * as fs from "fs";
-import * as unzipper from "unzipper";
-import * as https from "https";
 import { startServer } from "@a4z/web-server";
 import open from "open";
-import { ConfigManager } from "./core/configManager.js";
+import yaml from "js-yaml";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+import type { Workflow } from "./types/workflow.js";
 
-// Load the configuration file
-const config = ConfigManager.getInstance().getConfig();
-console.log(`✨ Welcome to ${config?.appName} v${config?.version}`);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const program = new Command();
 
 program
   .name("a4z")
-  .description(
-    "Automation CLI for mainframe and local tasks, driven by YAML workflows"
-  )
-  .version("0.1.0");
+  .description("CLI pour automatiser les tâches sur z/OS")
+  .version("1.0.0");
 
-// run workflow
 program
-  .command("run")
-  .description("Exécute un workflow YAML")
-  .argument("<workflow>", "Chemin vers le fichier YAML")
-  .option("--debugMode", "Mode débogage")
-  .option(
-    "--env <keyValue...>",
-    "Variables d’environnement à injecter",
-    (value, previous: Record<string, string>) => {
-      const [key, val] = value.split("=");
-      previous[key] = val;
-      return previous;
-    },
-    {}
-  )
-  .action(async (workflow, options) => {
-    await runWorkflow(workflow, options.env, options.debugMode);
-  });
+  .command("init")
+  .description("Initialiser un nouveau projet Automate4z")
+  .action(async () => {
+    try {
+      const templatePath = path.resolve(__dirname, "../templates/init");
+      const targetPath = process.cwd();
 
-// add-plugin
-program
-  .command("add-plugin")
-  .description("Ajoute un plugin externe via un fichier zip local ou une URL")
-  .argument("<source>", "Chemin vers un fichier zip ou URL http(s)")
-  .action(async (source) => {
-    const pluginsDir = path.resolve("a4z_plugins");
-    fs.mkdirSync(pluginsDir, { recursive: true });
-
-    const tmpZipPath = path.resolve("a4z_plugins/tmp_plugin.zip");
-
-    if (source.startsWith("http")) {
-      const file = fs.createWriteStream(tmpZipPath);
-      console.log(`⬇️  Téléchargement du plugin depuis ${source}...`);
-      await new Promise((resolve, reject) => {
-        https
-          .get(source, (response) => {
-            if (response.statusCode !== 200) {
-              reject(new Error(`Erreur HTTP ${response.statusCode}`));
-            }
-            response.pipe(file);
-            file.on("finish", () => file.close(resolve));
-          })
-          .on("error", reject);
-      });
-    } else {
-      if (!fs.existsSync(source)) {
-        console.error(`❌ Fichier introuvable : ${source}`);
+      if (!fs.existsSync(templatePath)) {
+        console.error(
+          "Erreur: Le répertoire des templates n'existe pas:",
+          templatePath
+        );
         process.exit(1);
       }
-      fs.copyFileSync(source, tmpZipPath);
-    }
 
-    const zip = fs
-      .createReadStream(tmpZipPath)
-      .pipe(unzipper.Extract({ path: pluginsDir }));
-    await new Promise((resolve, reject) => {
-      zip.on("close", resolve);
-      zip.on("error", reject);
-    });
+      // Copier les fichiers du template
+      fs.cpSync(templatePath, targetPath, { recursive: true });
 
-    fs.unlinkSync(tmpZipPath);
-
-    const extractedDirs = fs
-      .readdirSync(pluginsDir, { withFileTypes: true })
-      .filter((f) => f.isDirectory());
-    const lastExtractedPath = path.resolve(
-      pluginsDir,
-      extractedDirs[extractedDirs.length - 1].name
-    );
-    const pluginPkg = path.join(lastExtractedPath, "package.json");
-    if (fs.existsSync(pluginPkg)) {
-      console.log("📦 Dépendances détectées. Installation avec npm install...");
-      const { execSync } = await import("child_process");
-      try {
-        execSync("npm install", { cwd: lastExtractedPath, stdio: "inherit" });
-      } catch (err) {
-        console.warn(
-          "⚠️ Échec de npm install. Le plugin risque de ne pas fonctionner correctement."
-        );
-      }
-    }
-
-    const newPluginPath =
-      "./a4z_plugins/" + extractedDirs[extractedDirs.length - 1].name;
-    const pkgPath = path.resolve("package.json");
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
-    pkg.a4z = pkg.a4z || {};
-    pkg.a4z.plugins = pkg.a4z.plugins || [];
-
-    if (!pkg.a4z.plugins.includes(newPluginPath)) {
-      pkg.a4z.plugins.push(newPluginPath);
-      fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
-    }
-
-    console.log(`✅ Plugin ajouté et référencé depuis ${newPluginPath}`);
-  });
-
-// list-plugins
-program
-  .command("list-plugins")
-  .description("Liste les plugins installés")
-  .action(() => {
-    const pkgPath = path.resolve("package.json");
-    if (!fs.existsSync(pkgPath)) {
-      console.error("❌ package.json introuvable");
+      console.log("✅ Projet Automate4z initialisé avec succès!");
+      console.log("\nPour commencer:");
+      console.log("1. Éditez le fichier workflow.yaml");
+      console.log("2. Configurez vos connexions dans config.yaml");
+      console.log("3. Exécutez votre workflow avec: a4z run workflow.yaml");
+    } catch (error) {
+      console.error("Erreur lors de l'initialisation du projet:", error);
       process.exit(1);
     }
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
-    const plugins = pkg.a4z?.plugins ?? [];
-    if (plugins.length === 0) {
-      console.log("📦 Aucun plugin installé.");
-    } else {
-      console.log("📦 Plugins installés :");
-      for (const plugin of plugins) {
-        console.log(" -", plugin);
-      }
-    }
   });
 
-// remove-plugin
 program
-  .command("remove-plugin")
-  .description("Supprime un plugin installé localement")
-  .argument(
-    "<name>",
-    "Nom du plugin à supprimer (chemin relatif dans a4z_plugins)"
+  .command("run")
+  .description("Exécuter un workflow")
+  .argument("<file>", "Fichier de workflow à exécuter")
+  .option(
+    "-e, --env <env>",
+    "Variables d'environnement (format: KEY=VALUE,...)"
   )
-  .action((name) => {
-    const pluginPath = "./a4z_plugins/" + name;
-    const fullPluginPath = path.resolve(pluginPath);
-    const pkgPath = path.resolve("package.json");
+  .action(async (file: string, options: { env?: string }) => {
+    try {
+      const envVars: Record<string, string> = {};
+      if (options.env) {
+        options.env.split(",").forEach((pair) => {
+          const [key, value] = pair.split("=");
+          if (key && value) {
+            envVars[key.trim()] = value.trim();
+          }
+        });
+      }
 
-    if (!fs.existsSync(pkgPath)) {
-      console.error("❌ package.json introuvable");
+      const workflowPath = path.resolve(process.cwd(), file);
+      if (!fs.existsSync(workflowPath)) {
+        console.error(
+          "Erreur: Le fichier de workflow n'existe pas:",
+          workflowPath
+        );
+        process.exit(1);
+      }
+
+      const workflowContent = fs.readFileSync(workflowPath, "utf-8");
+      const workflow = yaml.load(workflowContent) as Workflow;
+
+      await runWorkflow(workflow, false);
+    } catch (error) {
+      console.error("Erreur lors de l'exécution du workflow:", error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command("doc")
+  .description(
+    "Afficher la documentation d'une action ou la liste des actions disponibles"
+  )
+  .argument("[action]", "Nom de l'action à documenter")
+  .action(async (actionName: string | undefined) => {
+    const actionDir = path.resolve(__dirname, "../src/steps");
+    if (!actionName) {
+      // Lister toutes les actions disponibles
+      console.log("Actions disponibles:");
+      // ... logique pour lister les actions
+      return;
+    }
+
+    // Afficher la documentation d'une action spécifique
+    const actionPath = path.resolve(actionDir, actionName);
+    if (!fs.existsSync(actionPath)) {
+      console.error("Erreur: Action non trouvée:", actionName);
       process.exit(1);
     }
 
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
-    pkg.a4z = pkg.a4z || {};
-    pkg.a4z.plugins = (pkg.a4z.plugins || []).filter(
-      (p: string) => p !== pluginPath
-    );
-    fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
-
-    if (fs.existsSync(fullPluginPath)) {
-      fs.rmSync(fullPluginPath, { recursive: true, force: true });
-      console.log(`🗑️  Plugin supprimé : ${pluginPath}`);
-    } else {
-      console.warn(`⚠️  Plugin non trouvé sur disque : ${pluginPath}`);
-    }
+    // ... logique pour afficher la documentation
   });
 
 program
   .command("ui")
-  .description("Lancer l’UI Web pour construire et exécuter des workflows")
-  .option("--dir <path>", "Répertoire des workflows", process.cwd())
-  .action(async (opts) => {
-    await startServer(opts.dir);
-    open("http://localhost:3000");
+  .description("Démarrer l'interface utilisateur web")
+  .option("-p, --port <port>", "Port d'écoute", "3000")
+  .option("-h, --host <host>", "Hôte d'écoute", "localhost")
+  .action(async (options: { port: string; host: string }) => {
+    try {
+      const port = parseInt(options.port, 10);
+      const host = options.host;
+
+      await startServer(port.toString());
+      console.log(`✅ Interface web démarrée sur http://${host}:${port}`);
+      await open(`http://${host}:${port}`);
+    } catch (error) {
+      console.error("Erreur lors du démarrage de l'interface web:", error);
+      process.exit(1);
+    }
   });
 
 program.parse();

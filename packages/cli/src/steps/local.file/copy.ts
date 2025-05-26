@@ -1,5 +1,6 @@
 import { z } from "zod";
 import fs from "fs";
+import { Context } from "../../core/context.js";
 
 export const schema = z.object({
   source: z.string().describe("Source file path"),
@@ -8,8 +9,8 @@ export const schema = z.object({
 
 export async function run(
   step: { with: { source: string; destination: string } },
-  context: any
-) {
+  _context: Context
+): Promise<{ success: boolean; source?: string; destination?: string }> {
   const { source, destination } = step.with;
 
   if (!fs.existsSync(source)) {

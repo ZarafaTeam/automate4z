@@ -1,38 +1,37 @@
 import { Session, ProfileInfo } from "@zowe/imperative";
-import { AUTH_TYPE_BASIC } from "@zowe/imperative/lib/rest/src/session/SessConstants";
-import { ConfigManager } from "./configManager";
+import { AUTH_TYPE_BASIC } from "@zowe/imperative/lib/rest/src/session/SessConstants.js";
+import { ConfigManager } from "./configManager.js";
+import keytar from "keytar";
 
 export class SessionManager {
   private static instance: SessionManager;
-  private session!: Session;
+  private readonly sessions: Map<string, Session>;
+
+  private constructor() {
+    this.sessions = new Map();
+  }
 
   private readonly authentification = async (
     type: string,
-    profil: string,
+    profile: string,
     hostname: string,
     port: number,
     user: string,
     password: string
   ): Promise<Session | undefined> => {
     if (type === "zowe") {
-      const profInfo = new ProfileInfo("zowe");
-      await profInfo.readProfilesFromDisk();
-      // Récupérer tous les profils
-      const allProfAttrs = profInfo.getAllProfiles();
-
-      // Sélectionner un profil spécifique autre que le profil par défaut
-      const profileName = profil;
-      const zosmfProfAttrs = allProfAttrs.find(
-        (profile) => profile.profName === profileName
-      );
-
+      const profileInfo = new ProfileInfo("zowe");
+      await profileInfo.readProfilesFromDisk();
+      const allProfAttrs = profileInfo.getAllProfiles();
+      const zosmfProfAttrs = allProfAttrs.find((p) => p.profName === profile);
       if (zosmfProfAttrs) {
-        const zosmfMergedArgs = profInfo.mergeArgsForProfile(zosmfProfAttrs, {
-          getSecureVals: true,
-        });
+        const zosmfMergedArgs = profileInfo.mergeArgsForProfile(
+          zosmfProfAttrs,
+          { getSecureVals: true }
+        );
         return ProfileInfo.createSession(zosmfMergedArgs.knownArgs);
       } else {
-        console.error(`❌ No zowe profil found for : ${profil}`);
+        console.error(`✘ No Zowe profile found for: ${profile}`);
         return undefined;
       }
     } else if (type === "basic") {
@@ -44,12 +43,9 @@ export class SessionManager {
         password,
         rejectUnauthorized: false,
         protocol: "https",
-        type: "basic",
-        strictSSL: true,
-        secureProtocol: "SSLv23_method",
-        base64EncodedAuth: "YTQ4NjA0MjpvcmFuZ2UxMg==",
-        $0: "",
-        _: [""],
+        type: AUTH_TYPE_BASIC,
+        serviceProtocol: "SSLv23_method",
+        base64EncodedAuth: "YTY0M9J4AMp9pvmWFzUXWg==", // à adapter
       };
 
       const session = new Session({
@@ -61,51 +57,71 @@ export class SessionManager {
         type: AUTH_TYPE_BASIC,
         rejectUnauthorized: config.rejectUnauthorized ?? false,
       });
+
       return session;
     } else {
-      console.error(`❌ Invalid authentication type ${type}`);
+      console.error(`✘ Invalid authentication type ${type}`);
+      return undefined;
     }
   };
 
-  private constructor() {
-    // Constructor is now synchronous and does not perform async operations
-  }
-
-  public async initialize(): Promise<void> {
-    const config = ConfigManager.getInstance().getConfig();
-
+  public async initialize(sessionId: string): Promise<Session | undefined> {
     try {
-      if (!config) {
-        throw new Error("Configuration is null or undefined");
+      const config = ConfigManager.getInstance().getConfig();
+      if (!config) throw new Error("Configuration is null or undefined");
+
+      const connectionIndex = config.zosConnection.findIndex(
+        (c) => c.name === sessionId
+      );
+      if (connectionIndex === -1) {
+        throw new Error(
+          `Default ZOS connection '${config.defaultZosConnection}' not found in the configuration`
+        );
       }
 
+      const keyUser = `${sessionId.toUpperCase()}_USER`;
+      const keyPwd = `${sessionId.toUpperCase()}_PWD`;
+
+      const user = (await keytar.getPassword("automate4z", keyUser)) ?? "";
+      const password = (await keytar.getPassword("automate4z", keyPwd)) ?? "";
+
       const session = await this.authentification(
-        config.zosConnexion.type,
-        config.zosConnexion.profil,
-        config.zosConnexion.hostname,
-        config.zosConnexion.port,
-        config.zosConnexion.user,
-        config.zosConnexion.password
+        config.zosConnection[connectionIndex].type,
+        config.zosConnection[connectionIndex].profile ?? "",
+        config.zosConnection[connectionIndex].hostname ?? "",
+        config.zosConnection[connectionIndex].port ?? 443,
+        user,
+        password
       );
+
       if (session) {
-        this.session = session;
+        return session;
       } else {
-        throw new Error("Session creation failed");
+        console.error("✘ Session creation failed");
+        return undefined;
       }
     } catch (error) {
       if (error instanceof Error) {
-        console.error("❌ Error during authentication :", error.message);
+        console.error("✘ Error during authentication:", error.message);
       } else {
-        console.error("❌ Error during authentication :", error);
+        console.error("✘ Unexpected error:", error);
       }
+      return undefined;
     }
   }
 
-  public async getSession(): Promise<Session> {
-    if (!this.session) {
-      await this.initialize();
+  public async getSession(sessionId: string): Promise<Session | undefined> {
+    sessionId = sessionId.toUpperCase();
+    if (!this.sessions.has(sessionId)) {
+      const session = await this.initialize(sessionId);
+      if (session) {
+        this.sessions.set(sessionId, session);
+      } else {
+        console.error(`✘ Failed to initialize session for ID: ${sessionId}`);
+        return undefined;
+      }
     }
-    return this.session;
+    return this.sessions.get(sessionId);
   }
 
   public static getInstance(): SessionManager {

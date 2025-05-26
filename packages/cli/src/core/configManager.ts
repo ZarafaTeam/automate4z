@@ -1,7 +1,11 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as yaml from "js-yaml";
-import { Config } from "../types/config";
+import { Config } from "../types/config.js";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export class ConfigManager {
   private static instance: ConfigManager;
