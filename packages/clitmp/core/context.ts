@@ -13,7 +13,7 @@ export class Context {
           const fn = new Function("env", `return ${expr}`);
           return fn(this.env);
         } catch (e) {
-          console.warn(`   ⚠️ Failed to resolve expression: {{ ${expr} }}`);
+          console.warn(`⚠️ Failed to resolve expression: {{ ${expr} }}`);
           return "";
         }
       });

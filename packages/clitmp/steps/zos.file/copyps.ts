@@ -1,7 +1,5 @@
 import { z } from "zod";
-import { Spinner } from "../../core/spinnerManager.js";
-import { ConfigManager } from "../../core/configManager.js";
-
+import { Session, ProfileInfo } from "@zowe/imperative";
 import {
   Copy,
   IDataSet,
@@ -13,26 +11,16 @@ import { SessionManager } from "../../core/sessionManager.js";
 export const schema = z.object({
   source: z.string().describe("Source PS file path"),
   destination: z.string().describe("Destination PS file path"),
-  connection: z.string(),
 });
 
 export async function run(
-  step: { with: { source: string; destination: string, connection: string } },
+  step: { with: { source: string; destination: string } },
   context: any
 ): Promise<{ success: boolean; source?: string; destination?: string }> {
-  let { connection } = step.with;
-  if (!connection) {
-    if (!context.env.ZOSConnection) {
-      const config = ConfigManager.getInstance().getConfig();
-      connection = config?.defaultZosConnection ?? "";
-    } else {
-      connection = context.env.ZOSConnection.toUpperCase();
-    }
-  }
-  const session = await SessionManager.getInstance().getSession(connection);
+  const session = await SessionManager.getInstance().getSession();
 
   if (!session) {
-    Spinner.error("Failed to authenticate: Session is undefined.");
+    console.error("❌ Failed to authenticate: Session is undefined.");
     return { success: false };
   }
 
@@ -57,10 +45,10 @@ export async function run(
     copyOptions
   );
   if (!response.success) {
-    Spinner.error(`Copy operation failed. ${response.errorMessage}`);
+    console.error(`❌ Copy operation failed. ${response.errorMessage}`);
     return { success: false };
   }
 
-  Spinner.log(`✅ File copied successfully from ${source} to ${destination}`);
+  console.log(`✅ File copied successfully from ${source} to ${destination}`);
   return { success: true, source, destination };
 }

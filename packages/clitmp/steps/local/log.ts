@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { Spinner } from "../../core/spinnerManager.js";
 
 export const schema = z.object({
   message: z.string(),
@@ -7,6 +6,6 @@ export const schema = z.object({
 
 export async function run(step: { with: { message: string } }, context: any) {
   const message = step.with.message;
-  Spinner.log(`📝 ${message}`);
+  console.log(`📝 ${message}`);
   return { success: true, message };
 }

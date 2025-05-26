@@ -8,32 +8,10 @@ import * as https from "https";
 import { startServer } from "@a4z/web-server";
 import open from "open";
 import { ConfigManager } from "./core/configManager.js";
-import yaml from "js-yaml";
-import { fileURLToPath } from "url"; // Import nécessaire pour ES modules
-import chalk from "chalk";
-import { marked } from "marked";
-import TerminalRenderer from "marked-terminal";
-import { initCLI} from "./core/commands/config.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Load the configuration file
 const config = ConfigManager.getInstance().getConfig();
-console.log(`\n✨ Welcome to ${config?.appName} v${config?.version}\n`);
-if (config?.defaultZosConnection && config.zosConnection) {
-  const defaultConnectionExists = Object.values(config.zosConnection).some(
-    (conn) => conn.name === config.defaultZosConnection
-  );
-
-  if (!defaultConnectionExists) {
-    console.error(
-      `⚠️  La connexion par défaut "${config.defaultZosConnection}" n'est pas définie dans le fichier de configuration.`
-    );
-    process.exit(1);
-  }
-  
-}
+console.log(`✨ Welcome to ${config?.appName} v${config?.version}`);
 
 const program = new Command();
 
@@ -62,86 +40,6 @@ program
   )
   .action(async (workflow, options) => {
     await runWorkflow(workflow, options.env, options.debugMode);
-  });
-
-  // run workflow
-program
-  .command("init")
-  .description("Initialisation de automate4z")
-  .action(async (options) => {
-   initCLI();
-  });
-
-// doc
-program
-  .command("doc")
-  .description("Afficher la documentation d\'une action ou la liste  des actions disponibles")
-  .argument("[action]", "Nom de l\'action à documenter")
-  .action(async (actionName) => {
-    const actionDir = path.resolve(__dirname, "../src/steps");
-    const docs: Record<string, any> = {};
-
-    const renderer: TerminalRenderer = new TerminalRenderer({
-    });
-
-    marked.setOptions({
-      renderer: renderer as any,
-    });
-    //console.log(marked("# Titre1\n**Hello** `JimHoc`"));
-
-    //marked.use(markedTerminal([options],[highlightOptions]));
-    
-    const readDocs = (dir: string) => {
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
-      for (const entry of entries) {
-        const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-          readDocs(fullPath);
-        } else if (entry.isFile() && entry.name.endsWith(".doc.yaml")) {
-          const content = fs.readFileSync(fullPath, "utf-8");
-          try {
-            const doc = yaml.load(content) as { name: string; description: string; input: object; output: object };
-            //docs[entry.name.replace(".doc.yaml", "")] = doc;
-            docs[doc.name] = doc;
-          } catch (err) {
-            console.warn(`⚠️ Erreur lors du chargement de ${fullPath}:`, err);
-          }
-        }
-      }
-    };
-
-    readDocs(actionDir);
-    //console.log("📚 Documentation chargée :", Object.keys(docs));
-    if (actionName) {
-      const actionDoc = docs[actionName];
-      if (!actionDoc) {
-        console.error(`Action ${actionName} introuvable.`);
-        process.exit(1);
-      }
-      console.log(`📚 Documentation de l\'action ` + chalk.yellowBright(`${actionName}\n`));
-      console.log(chalk.bold.blueBright(`Description: `) + marked(`${actionDoc.description}`));
-      if (actionDoc.inputs) {
-        console.log(chalk.bold.blueBright(`Entrées:`));
-        for (const input of actionDoc.inputs || []) {
-          console.log(`- ${input?.name}: ${input?.type} ${input?.required ? "(obligatoire)" : "(optionnel)"}. ` + marked(`${input?.description}`));
-        }
-      }
-      if (actionDoc.outputs) {
-        console.log(chalk.bold.blueBright(`Sorties:`));
-        for (const output of actionDoc.outputs || []) {
-          console.log(`- ${output?.name}: ${output?.type}. ` + marked(`${output?.description}`));
-        }
-      }
-      if (actionDoc.examples) {
-        console.log(chalk.bold.blueBright(`Exemples:`));
-        console.log(marked(actionDoc.examples));
-      }
-    } else {
-      console.log(`Actions disponibles:\n`);	
-      for (const key of Object.keys(docs)) {
-        console.log('-' + chalk.blueBright(` ${key}`) + marked(`: ${docs[key].description}`));
-      }
-    }
   });
 
 // add-plugin

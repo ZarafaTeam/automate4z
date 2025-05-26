@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { ITaskWithStatus } from "@zowe/imperative";
-import { ConfigManager } from "../../core/configManager.js";
 import {
   Copy,
   List,
@@ -13,23 +12,13 @@ import { SessionManager } from "../../core/sessionManager.js";
 export const schema = z.object({
   source: z.string().describe("Source PDS path"),
   destination: z.string().describe("Destination PDS path"),
-  connection: z.string().optional(),
 });
 
 export async function run(
-  step: { with: { source: string; destination: string, connection: string } },
+  step: { with: { source: string; destination: string } },
   context: any
 ): Promise<{ success: boolean; source?: string; destination?: string }> {
-  let { connection } = step.with;
-  if (!connection) {
-    if (!context.env.ZOSConnection) {
-      const config = ConfigManager.getInstance().getConfig();
-      connection = config?.defaultZosConnection ?? "";
-    } else {
-      connection = context.env.ZOSConnection.toUpperCase();
-    }
-  }
-  const session = await SessionManager.getInstance().getSession(connection);
+  const session = await SessionManager.getInstance().getSession();
 
   if (!session) {
     console.error("❌ Failed to authenticate: Session is undefined.");
@@ -41,13 +30,13 @@ export async function run(
   try {
     const isPDSSource = await Copy.isPDS(session, source);
     if (!isPDSSource) {
-      console.error(`   ❌ Source ${source} is not a PDS.`);
+      console.error(`❌ Source ${source} is not a PDS.`);
       return { success: false };
     }
 
     const isPDSDestination = await Copy.isPDS(session, destination);
     if (!isPDSDestination) {
-      console.error(`   ❌ Destination ${destination} is not a PDS.`);
+      console.error(`❌ Destination ${destination} is not a PDS.`);
       return { success: false };
     }
 
@@ -66,15 +55,15 @@ export async function run(
     );
 
     if (response.success) {
-      console.log(`   ✅ Copy operation completed successfully.`);
+      console.log(`✅ Copy operation completed successfully.`);
       return { success: true, source, destination };
     }
 
-    console.error(`   ❌ Copy operation failed. ${response.errorMessage}`);
+    console.error(`❌ Copy operation failed. ${response.errorMessage}`);
     return { success: false };
   } catch (error) {
     const errorMessage = (error as any)?.details?.msg || "Unknown error";
-    console.error(`   ❌ Copy operation failed. ${errorMessage}`);
+    console.error(`❌ Copy operation failed. ${errorMessage}`);
     return { success: false };
   }
 }

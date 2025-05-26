@@ -14,7 +14,7 @@ export async function run(
     const result = fn(context.getEnvObject(), context.getEnvObject().item);
     return { success: true, result };
   } catch (err) {
-    console.error(`   ❌ Failed to evaluate expression: ${expr}`);
+    console.error(`❌ Failed to evaluate expression: ${expr}`);
     console.error(err);
     throw err;
   }

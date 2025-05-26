@@ -1,0 +1,40 @@
+name: local.say
+description: |
+  Cette étape est utilisée pour enregistrer des messages dans la console.
+  Elle peut être utilisée à des fins de **débogage ou d'information**.
+  Le message peut être une chaîne de caractères ou un objet JSON. S'il s'agit d'un objet JSON, il sera converti en chaîne de caractères avant d'être enregistré.
+inputs:
+  - name: message
+    type: string
+    description: Le message à afficher. Il peut s'agir d'une **chaîne de caractères** ou d'un objet **JSON**.
+    required: true
+outputs:
+  - name: success
+    type: boolean
+    description: Indique si l'action a réussi.
+  - name: message
+    type: string
+    description: Le message à afficher. Si l'entrée est un objet JSON, elle sera converti en chaîne de caractères avant d'être affichée.
+examples: |
+  Code pour afficher un *message* de bienvenue dans :cactus: la console [](https://www.google.com/):
+  * out A
+  * out B
+
+  ```yaml
+  env:
+    name: "JimHoc" 
+
+  - name: WELCOME
+    action: local.log
+    with:
+      message: "Welcome {{ env['name'] }}" 
+  ```
+  Affichera:
+  ✔ Step "WELCOME" completed
+    📝 Welcome JimHoc    
+
+
+  | Lorem | Ipsum |
+  |-------|-------|
+  | 1     | 2     |
+  | 3     | 4     |  

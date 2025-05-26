@@ -3,17 +3,14 @@ import { Spinner } from "../../core/spinnerManager.js";
 import { ConfigManager } from "../../core/configManager.js";
 
 import {
-  Copy,
-  IDataSet,
-  ICopyDatasetOptions,
-  IZosFilesResponse,
+  Download
 } from "@zowe/zos-files-for-zowe-sdk";
 import { SessionManager } from "../../core/sessionManager.js";
 
 export const schema = z.object({
   source: z.string().describe("Source PS file path"),
   destination: z.string().describe("Destination PS file path"),
-  connection: z.string(),
+  connection: z.string().optional(),
 });
 
 export async function run(
@@ -31,6 +28,7 @@ export async function run(
   }
   const session = await SessionManager.getInstance().getSession(connection);
 
+
   if (!session) {
     Spinner.error("Failed to authenticate: Session is undefined.");
     return { success: false };
@@ -38,29 +36,20 @@ export async function run(
 
   const { source, destination } = step.with;
 
-  const toDataSet: IDataSet = {
-    dsn: destination,
-  };
+  try {
+    const response= await Download.dataSet(session, source, {file: destination});
+    if (!response.success) {
+      Spinner.error(`Copy operation failed. ${response.errorMessage}`);
+      return { success: false };
+    }
+    Spinner.log(`✅ File copied successfully from ${connection}|${source} to ${destination}`);
+    return { success: true, source, destination };
 
-  const copyOptions: ICopyDatasetOptions = {
-    "from-dataset": {
-      dsn: source,
-    },
-    enq: "SHR",
-    replace: true,
-    safeReplace: true,
-  };
-
-  const response: IZosFilesResponse = await Copy.dataSet(
-    session,
-    toDataSet,
-    copyOptions
-  );
-  if (!response.success) {
-    Spinner.error(`Copy operation failed. ${response.errorMessage}`);
+  } catch (error) {
+    const errorMessage = (error as any)?.mDetails?.msg || "Unknown error";
+    const formattedErrorMessage = errorMessage.replace(/\n/g, ". ");
+    Spinner.error(`❌ Copy operation failed. ${formattedErrorMessage}`);
     return { success: false };
   }
-
-  Spinner.log(`✅ File copied successfully from ${source} to ${destination}`);
-  return { success: true, source, destination };
+  
 }

@@ -6,6 +6,6 @@ export const schema = z.object({
 
 export async function run(step: { with: { word: string } }, context: any) {
   const word = step.with.word.toUpperCase();
-  console.log(`   📣 ${word}!`);
+  console.log(`📣 ${word}!`);
   return { success: true, shouted: word };
 }

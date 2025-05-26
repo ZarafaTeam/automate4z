@@ -15,7 +15,7 @@ export async function run(
 
   if (!Array.isArray(innerSteps)) {
     throw new Error(
-      `   ❌ "steps" must be an array inside control.for-each step "${step.name}"`
+      `❌ "steps" must be an array inside control.for-each step "${step.name}"`
     );
   }
 

@@ -4,7 +4,6 @@ import { z } from "zod";
 
 const WorkflowSchema = z.object({
   env: z.record(z.any()).optional(),
-  description: z.string().optional(),
   steps: z.array(
     z.object({
       name: z.string(),
@@ -28,7 +27,7 @@ export function loadWorkflowFile(filePath: string) {
 
   const validation = WorkflowSchema.safeParse(parsed);
   if (!validation.success) {
-    console.error("   ❌ Invalid workflow YAML:", validation.error.format());
+    console.error("❌ Invalid workflow YAML:", validation.error.format());
     process.exit(1);
   }
   return validation.data;

@@ -1,11 +1,10 @@
 import { Session, ProfileInfo } from "@zowe/imperative";
-import { AUTH_TYPE_BASIC } from "@zowe/imperative/lib/rest/src/session/SessConstants.js";
-import { ConfigManager } from "./configManager.js";
-import keytar from "keytar";
+import { AUTH_TYPE_BASIC } from "@zowe/imperative/lib/rest/src/session/SessConstants";
+import { ConfigManager } from "./configManager";
 
 export class SessionManager {
   private static instance: SessionManager;
-  private readonly sessions: Map<string, Session>;
+  private session!: Session;
 
   private readonly authentification = async (
     type: string,
@@ -33,7 +32,7 @@ export class SessionManager {
         });
         return ProfileInfo.createSession(zosmfMergedArgs.knownArgs);
       } else {
-        console.error(`   ❌ No zowe profil found for : ${profil}`);
+        console.error(`❌ No zowe profil found for : ${profil}`);
         return undefined;
       }
     } else if (type === "basic") {
@@ -64,16 +63,15 @@ export class SessionManager {
       });
       return session;
     } else {
-      console.error(`   ❌ Invalid authentication type ${type}`);
+      console.error(`❌ Invalid authentication type ${type}`);
     }
   };
 
   private constructor() {
     // Constructor is now synchronous and does not perform async operations
-    this.sessions = new Map();
   }
 
-  public async initialize(sessionId: string): Promise<Session | undefined> {
+  public async initialize(): Promise<void> {
     const config = ConfigManager.getInstance().getConfig();
 
     try {
@@ -81,56 +79,33 @@ export class SessionManager {
         throw new Error("Configuration is null or undefined");
       }
 
-      const connectionIndex = config.zosConnection.findIndex(
-        (connection) => connection.name === sessionId
-      );
-
-      if (connectionIndex === -1) {
-        throw new Error(`Default ZOS connection '${config.defaultZosConnection}' not found in the configuration`);
-      }
-
-      const keyUser = `${sessionId.toUpperCase()}_USER`;
-      const keyPwd = `${sessionId.toUpperCase()}_PWD`;
-      const user = await keytar.getPassword("automate4z", keyUser) ?? "";
-      const password = await keytar.getPassword("automate4z", keyPwd) ?? "";
       const session = await this.authentification(
-        config.zosConnection[connectionIndex].type,
-        config.zosConnection[connectionIndex].profile,
-        config.zosConnection[connectionIndex].hostname,
-        config.zosConnection[connectionIndex].port,
-        user,
-        password
+        config.zosConnexion.type,
+        config.zosConnexion.profil,
+        config.zosConnexion.hostname,
+        config.zosConnexion.port,
+        config.zosConnexion.user,
+        config.zosConnexion.password
       );
-
       if (session) {
-        return session;
+        this.session = session;
       } else {
-        console.error("   ❌ Session creation failed");
-        return undefined;
+        throw new Error("Session creation failed");
       }
     } catch (error) {
       if (error instanceof Error) {
-        console.error("   ❌ Error during authentication :", error.message);
-        return undefined;
+        console.error("❌ Error during authentication :", error.message);
       } else {
-        console.error("   ❌ Error during authentication :", error);
-        return undefined;
+        console.error("❌ Error during authentication :", error);
       }
     }
   }
 
-  public async getSession(sessionId: string): Promise<Session | undefined> {
-    sessionId = sessionId.toUpperCase();
-    if (!this.sessions.has(sessionId)) {
-      const session = await this.initialize(sessionId);
-      if (session) {
-        this.sessions.set(sessionId, session);
-      } else {
-        console.error(`   ❌ Failed to initialize session for ID: ${sessionId}`);
-        return undefined;
-      }
+  public async getSession(): Promise<Session> {
+    if (!this.session) {
+      await this.initialize();
     }
-    return this.sessions.get(sessionId);
+    return this.session;
   }
 
   public static getInstance(): SessionManager {

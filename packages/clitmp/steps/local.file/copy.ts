@@ -13,7 +13,7 @@ export async function run(
   const { source, destination } = step.with;
 
   if (!fs.existsSync(source)) {
-    console.error(`   ❌ Source file does not exist: ${source}`);
+    console.error(`❌ Source file does not exist: ${source}`);
     return { success: false, source, destination };
   }
 
@@ -21,12 +21,12 @@ export async function run(
     fs.copyFileSync(source, destination);
   } catch (error) {
     if (error instanceof Error) {
-      console.error(`   ❌ Failed to copy file: ${error.message}`);
+      console.error(`❌ Failed to copy file: ${error.message}`);
     } else {
-      console.error(`   ❌ Failed to copy file: ${String(error)}`);
+      console.error(`❌ Failed to copy file: ${String(error)}`);
     }
     return { success: false, source, destination };
   }
-  console.log(`   ✅ File copied successfully from ${source} to ${destination}`);
+  console.log(`✅ File copied successfully from ${source} to ${destination}`);
   return { success: true, source, destination };
 }

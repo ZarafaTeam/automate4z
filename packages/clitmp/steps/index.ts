@@ -3,15 +3,10 @@ import * as localEval from "./local/eval.js";
 import * as localCollect from "./local/collect.js";
 import * as localSay from "./local/say.js";
 import * as localShout from "./local/shout.js";
-import * as localWait from "./local/wait.js";
-import * as localCsvToJson from "./local.file/csvtojson.js";
-import * as localTemplateRender from "./local.template/render.js";
 import * as controlForEach from "./control/for-each.js";
 import * as localFileCopy from "./local.file/copy.js";
-import * as localCopyToLocal from "./zos.file/copypstolocal.js";
 import * as zosFileCopyPS from "./zos.file/copyps.js";
 import * as zosFileCopyPDS from "./zos.file/copyps.js";
-import * as zosMyJclSubmit from "./zos.myjcl/submit.js";
 
 const registry: Record<string, any> = {
   "local.log": localLog,
@@ -19,15 +14,10 @@ const registry: Record<string, any> = {
   "local.collect": localCollect,
   "local.say": localSay,
   "local.shout": localShout,
-  "local.wait": localWait,
-  "local.file.csvtojson": localCsvToJson,
-  "local.template.render": localTemplateRender,
   "control.for-each": controlForEach,
   "local.file.copy": localFileCopy,
-  "zos.file.copypstolocal": localCopyToLocal,
   "zos.file.copyps": zosFileCopyPS,
-  "zos.file.copypds": zosFileCopyPDS,
-  "zos.myjcl.submit": zosMyJclSubmit,
+  "zos.file.copypds": zosFileCopyPS,
   // Add more steps here as needed
 };
 

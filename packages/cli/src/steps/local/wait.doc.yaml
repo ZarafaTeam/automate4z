@@ -1,0 +1,17 @@
+name: local.wait
+description: |
+  This step is used to log messages to the console. It can be used for debugging or informational purposes.
+  The message can be a string or a JSON object. If it is a JSON object, it will be converted to a string before logging.
+input:
+  message:
+    type: string
+    description: The message to log. It can be a string or a JSON object.
+    required: true
+output:
+  success:
+    type: boolean
+    description: Indicates whether the logging was successful.
+  message:
+    type: string
+    description: The logged message. If the input is a JSON object, it will be converted to a string before logging.
+  

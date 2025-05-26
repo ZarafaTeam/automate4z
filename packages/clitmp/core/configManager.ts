@@ -1,11 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as yaml from "js-yaml";
-import { fileURLToPath } from "url"; // Import nécessaire pour ES modules
-import { Config } from "../types/config.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { Config } from "../types/config";
 
 export class ConfigManager {
   private static instance: ConfigManager;
@@ -22,9 +18,9 @@ export class ConfigManager {
       this.config = yaml.load(fileContents) as Config;
     } catch (error) {
       if (error instanceof Error) {
-        console.error(`   ❌ Error reading config file: ${error.message}`);
+        console.error(`Error reading config file: ${error.message}`);
       } else {
-        console.error("   ❌ Error reading config file: Unknown error");
+        console.error("Error reading config file: Unknown error");
       }
       this.config = null;
       process.exit(1);
