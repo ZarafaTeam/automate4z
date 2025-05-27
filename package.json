@@ -15,6 +15,7 @@
   "dependencies": {
     "@zowe/imperative": "^8.20.0",
     "@zowe/secrets-for-zowe-sdk": "^8.18.3",
+    "chalk": "^5.4.1",
     "js-yaml": "^4.1.0"
   }
 }
