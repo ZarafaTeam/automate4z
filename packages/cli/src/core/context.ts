@@ -1,44 +1,97 @@
+import { Session } from "@zowe/imperative";
+import type { Workflow, WorkflowStep } from "../types/workflow.js";
+
 export class Context {
-  private env: Record<string, any> = {};
-  private outputs: Record<string, any> = {};
+  private static instance: Context;
+  private workflow?: Workflow;
+  private currentStep?: WorkflowStep;
+  private variables: Record<string, unknown>;
+  private outputs: Record<string, unknown>;
+  private session?: Session;
+  private stepResults: Array<{
+    name: string;
+    status: "success" | "failure" | "skipped";
+    output?: unknown;
+    error?: Error;
+  }>;
 
-  constructor(initialEnv: Record<string, any> = {}) {
-    this.env = { ...initialEnv };
+  private constructor() {
+    this.variables = {};
+    this.outputs = {};
+    this.stepResults = [];
   }
 
-  resolve(value: any): any {
-    if (typeof value === "string") {
-      return value.replace(/{{\s*(.*?)\s*}}/g, (_, expr) => {
-        try {
-          const fn = new Function("env", `return ${expr}`);
-          return fn(this.env);
-        } catch (e) {
-          console.warn(`⚠️ Failed to resolve expression: {{ ${expr} }}`);
-          return "";
-        }
-      });
+  public static getInstance(): Context {
+    if (!Context.instance) {
+      Context.instance = new Context();
     }
-    return value;
+    return Context.instance;
   }
 
-  setEnv(key: string, value: any) {
-    this.env[key] = value;
+  public setWorkflow(workflow: Workflow): void {
+    this.workflow = workflow;
   }
 
-  setOutput(stepName: string, result: any) {
-    if (!result) return;
-    for (const [key, value] of Object.entries(result)) {
-      const fullKey = `${stepName}.${key}`;
-      this.env[fullKey] = value;
-      this.outputs[fullKey] = value;
-    }
+  public getWorkflow(): Workflow | undefined {
+    return this.workflow;
   }
 
-  getEnv(key: string): any {
-    return this.env[key];
+  public setCurrentStep(step: WorkflowStep): void {
+    this.currentStep = step;
   }
 
-  getEnvObject(): Record<string, any> {
-    return { ...this.env };
+  public getCurrentStep(): WorkflowStep | undefined {
+    return this.currentStep;
+  }
+
+  public setVariable(name: string, value: unknown): void {
+    this.variables[name] = value;
+  }
+
+  public getVariable(name: string): unknown {
+    return this.variables[name];
+  }
+
+  public setOutput(name: string, value: unknown): void {
+    this.outputs[name] = value;
+  }
+
+  public getOutput(name: string): unknown {
+    return this.outputs[name];
+  }
+
+  public setSession(session: Session): void {
+    this.session = session;
+  }
+
+  public getSession(): Session | undefined {
+    return this.session;
+  }
+
+  public addStepResult(
+    name: string,
+    status: "success" | "failure" | "skipped",
+    output?: unknown,
+    error?: Error
+  ): void {
+    this.stepResults.push({ name, status, output, error });
+  }
+
+  public getStepResults(): Array<{
+    name: string;
+    status: "success" | "failure" | "skipped";
+    output?: unknown;
+    error?: Error;
+  }> {
+    return this.stepResults;
+  }
+
+  public reset(): void {
+    this.workflow = undefined;
+    this.currentStep = undefined;
+    this.variables = {};
+    this.outputs = {};
+    this.session = undefined;
+    this.stepResults = [];
   }
 }

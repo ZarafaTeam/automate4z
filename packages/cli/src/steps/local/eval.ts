@@ -1,21 +1,20 @@
 import { z } from "zod";
 
-export const schema = z.object({
+const schema = z.object({
   expression: z.string(),
 });
 
 export async function run(
   step: { with: { expression: string } },
-  context: any
-) {
-  const expr = step.with.expression;
+  _context: unknown
+): Promise<{ success: boolean; result: unknown }> {
   try {
-    const fn = new Function("env", "item", `return ${expr}`);
-    const result = fn(context.getEnvObject(), context.getEnvObject().item);
-    return { result };
-  } catch (err) {
-    console.error(`❌ Failed to evaluate expression: ${expr}`);
-    console.error(err);
-    throw err;
+    // eslint-disable-next-line no-new-func
+    const result = new Function(`return ${step.with.expression}`)();
+    return { success: true, result };
+  } catch (error) {
+    return { success: false, result: String(error) };
   }
 }
+
+export { schema };

@@ -5,10 +5,28 @@
     "bootstrap": "pnpm install",
     "build": "pnpm -r run build",
     "dev": "pnpm -r run dev",
-    "lint": "pnpm -r run lint"
+    "lint": "eslint . --ext .ts,.tsx",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "test": "vitest",
+    "test:watch": "vitest watch",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@typescript-eslint/eslint-plugin": "^8.32.1",
+    "@typescript-eslint/parser": "^8.32.1",
+    "@vitest/coverage-v8": "^1.2.1",
+    "@vitest/ui": "^1.2.1",
     "depcheck": "^1.4.7",
-    "typescript": "^5.1.0"
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^10.1.5",
+    "typescript": "^5.1.0",
+    "vitest": "^1.2.1"
+  },
+  "dependencies": {
+    "@zowe/imperative": "^8.20.0",
+    "@zowe/secrets-for-zowe-sdk": "^8.18.3",
+    "js-yaml": "^4.1.0"
   }
 }

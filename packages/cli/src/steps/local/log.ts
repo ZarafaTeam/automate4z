@@ -1,16 +1,15 @@
 import { z } from "zod";
 
 const schema = z.object({
-  name: z.string(),
+  message: z.string(),
 });
 
 export async function run(
-  step: { with: { name: string } },
+  step: { with: { message: string } },
   _context: unknown
 ): Promise<{ success: boolean; message: string }> {
-  const message = `Hello, ${step.with.name}!`;
-  console.log(message);
-  return { success: true, message };
+  console.log(step.with.message);
+  return { success: true, message: step.with.message };
 }
 
 export { schema };

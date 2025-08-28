@@ -2,19 +2,49 @@ import { loadWorkflowFile } from "./loader.js";
 import { getStepHandler } from "../steps/index.js";
 import { Context } from "./context.js";
 import type { Step } from "../types/step.js";
+import { Spinner } from "./spinnerManager.js";
+import chalk from "chalk";
+
+function shouldRunStep(
+  step: Step,
+  workflowStatus: "success" | "failure"
+): boolean {
+  if (step.if === "always()") return true; // Always run this step
+  if (step.if === "success()" && workflowStatus === "success") return true; // Run if workflow was successful
+  if (step.if === "failure()" && workflowStatus === "failure") return true; // Run if workflow failed
+  if (!step.if && workflowStatus === "failure") return false;
+  else return true; // Run if no condition is set and workflow was successful
+
+  return true; // Default case, do not run the step
+}
 
 export async function runWorkflow(
   filePath: string,
-  cliEnv: Record<string, string> = {}
+  cliEnv: Record<string, string> = {},
+  debugMode: boolean = false
 ) {
   const workflow = loadWorkflowFile(filePath);
   const fileEnv = workflow.env ?? {};
   const steps: Step[] = workflow.steps ?? [];
+  let workflowStatus: "success" | "failure" = "success";
 
   const env = { ...fileEnv, ...cliEnv };
   const context = new Context(env);
+  console.log(`🔄 automate4z is running workflow file "${filePath}"`);
+  if (workflow.description) console.log(workflow.description);
 
   for (const step of steps) {
+    if (step.if) {
+      Spinner.start(`Step "${step.name}" is running, condition: ${step.if}`);
+    } else {
+      Spinner.start(`Step "${step.name}" is running`);
+    }
+
+    if (!shouldRunStep(step, workflowStatus)) {
+      console.log(`⏭️  Step "${step.name}" skipped (condition "if" not met).`);
+      continue;
+    }
+
     const loopItems = context.resolve(step.forEach);
 
     if (Array.isArray(loopItems)) {
@@ -22,22 +52,54 @@ export async function runWorkflow(
         const item = loopItems[i];
         const loopStep = { ...step, name: `${step.name}#${i + 1}` };
         const scopedContext = new Context({ ...context.getEnvObject(), item });
-        await executeStep(loopStep, scopedContext, context, item);
+        await executeStep(loopStep, scopedContext, context, debugMode, item);
       }
       continue;
     }
+    try {
+      const result = await executeStep(step, context, context, debugMode);
+      if (result) {
+        Spinner.succeed(`Step "${step.name}" completed`);
+      } else {
+        Spinner.fail(`Step "${step.name}" failed`);
+      }
+      if (result) {
+        if (workflowStatus === "success") {
+          workflowStatus = "success";
+        } else workflowStatus = "failure";
+      } else {
+        workflowStatus = "failure";
+      }
+      //console.log(`✅ Step "${step.name}" completed, workflowStatus : ${workflowStatus}.`);
+    } catch (error) {
+      Spinner.fail(`Step "${step.name}" failed: ${error}`);
 
-    await executeStep(step, context, context);
+      workflowStatus = "failure";
+    }
   }
+  console.log(`\n🧪 Workflow completed.\n	`);
 }
 
 export async function executeStep(
   step: Step,
   context: Context,
   parentContext: Context,
+  debugMode: boolean = false,
   item?: any
-) {
-  const condition = context.resolve(step.if);
+): Promise<boolean> {
+  //console.log(step);
+  let condition: any;
+
+  if (
+    step.if === "always()" ||
+    step.if === "success()" ||
+    step.if === "failure()"
+  ) {
+    condition = true;
+  } else {
+    condition = context.resolve(step.if);
+  }
+
   const ifPassed =
     condition === undefined ||
     condition === true ||
@@ -45,8 +107,8 @@ export async function executeStep(
     condition === "1";
 
   if (!ifPassed) {
-    console.log(`⏭️  Step "${step.name}" skipped (condition "if" not met).`);
-    return;
+    Spinner.log(`\n⏭️  Step "${step.name}" skipped (condition "if" not met).`);
+    return true;
   }
 
   const rawActive = step.active;
@@ -56,44 +118,74 @@ export async function executeStep(
     resolvedActive === true ||
     resolvedActive === "true";
 
-  console.log(`🔄 Running step "${step.name}"...`);
+  //console.log(`\n🔄 Running step "${step.name}"...`);
+  console.log(`🔄 Running step "${step.name}", step.if = ${step.if}...`);
   if (!isActive) {
-    console.log(`⏭️  Step "${step.name}" is inactive. Skipping.`);
-    return;
+    Spinner.log(
+      `⏭️ ` + chalk.yellowBright(`Step "${step.name}" is inactive. Skipping.`)
+    );
+    return true;
   }
 
-  const handler = getStepHandler(step.action);
-
-  let resolvedInputs = Object.fromEntries(
-    Object.entries(step.with ?? {}).map(([k, v]) => [k, context.resolve(v)])
-  );
-
-  if (handler.schema) {
-    const validation = handler.schema.safeParse(resolvedInputs);
-    if (!validation.success) {
-      console.error(`❌ Invalid input for step "${step.name}":`);
-      console.error(validation.error.format());
-      process.exit(1);
+  let handler;
+  try {
+    handler = getStepHandler(step.action);
+  } catch (error) {
+    if (error instanceof Error) {
+      Spinner.error(`  ❌ ${error.message}`);
+      return false;
+    } else {
+      Spinner.error(
+        `  ❌ Failed to get handler for step "${step.name}":${error}`
+      );
+      return false;
     }
-    resolvedInputs = validation.data;
+    //process.exit(1);
   }
 
-  const result = await handler.run({ ...step, with: resolvedInputs }, context);
-  //console.log(`✅ Step "${step.name}" completed.`);
-  //console.log(`🧪 Step "${step.name}" result:`, result);
-  //console.log(`🧪 Step "${step.name}" context:`, context);
+  if (handler) {
+    let resolvedInputs = Object.fromEntries(
+      Object.entries(step.with ?? {}).map(([k, v]) => [k, context.resolve(v)])
+    );
 
-  parentContext.setOutput(step.name, result);
+    if (handler.schema) {
+      const validation = handler.schema.safeParse(resolvedInputs);
+      if (!validation.success) {
+        Spinner.error(`❌ Invalid input for step "${step.name}":`);
+        Spinner.error(validation.error.format());
+        return false;
+        //process.exit(1);
+      }
+      resolvedInputs = validation.data;
+    }
 
-  if (step.output) {
-    for (const [envKey, resultKey] of Object.entries(step.output)) {
-      const value = result?.[resultKey];
-      console.log(`📦 Exporting "${resultKey}" as env["${envKey}"] = ${value}`);
-      if (value !== undefined) {
-        parentContext.setEnv(envKey, value);
+    const result = await handler.run(
+      { ...step, with: resolvedInputs },
+      context
+    );
+    //console.log(`✅ Step "${step.name}" completed.`);
+    //console.log(`🧪 Step "${step.name}" result:`, result);
+    //console.log(`🧪 Step "${step.name}" context:`, context);
+
+    parentContext.setOutput(step.name, result);
+
+    if (step.output) {
+      for (const [envKey, resultKey] of Object.entries(step.output)) {
+        const value = result?.[resultKey];
+        Spinner.log(
+          `📦 Exporting "${resultKey}" as env["${envKey}"] = ${value}`
+        );
+        if (value !== undefined) {
+          parentContext.setEnv(envKey, value);
+        }
       }
     }
+    Spinner.debug(`🧪 Step "${step.name}" returned:${JSON.stringify(result)}`);
+    return result.success ?? true;
+  } else {
+    const result = { success: false };
+    parentContext.setOutput(step.name, result);
+    Spinner.debug(`🧪 Step "${step.name}" returned:${JSON.stringify(result)}`);
+    return result.success ?? false;
   }
-
-  console.log(`🧪 Step "${step.name}" returned:`, result);
 }

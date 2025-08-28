@@ -1,0 +1,13 @@
+steps:
+  - name: copy-readme
+    action: local.file.copy
+    with:
+      source: "README.md"
+      destination: "README.bkp"
+  - name: step-inconnu
+    if: always()
+    # active: false
+    action: local.file.rename
+    with:
+      source: "README.md"
+      destination: "README.bkp"
